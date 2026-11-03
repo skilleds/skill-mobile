@@ -37,7 +37,7 @@ unzip skill-mobile.zip -d .claude/skills/
 
 ## O que tem dentro
 
-- **SKILL.md** — o contrato: 10 pisos inegociáveis (o piso da casa é o mesmo; nunca segredo no
+- **SKILL.md** — o contrato: 11 pisos inegociáveis (o piso da casa é o mesmo; nunca segredo no
   bundle; auth delegada ao IdP no servidor; secure storage sem vazamento; passkeys+biometria no
   núcleo com biometria≠autorização; offline-first sem perder escrita; rollout gradual com gate;
   device é território hostil) + mapa de references.

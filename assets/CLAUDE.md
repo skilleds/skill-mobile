@@ -17,50 +17,46 @@ memória.
 
 ## Pisos inegociáveis (VETADO — sem exceção)
 
-1. **NUNCA segredo no bundle.** API key privada, `client_secret`, chave de assinatura, credencial
+1. **O piso da casa é o MESMO — muda o "como".** Segurança, IAM, testes, ops, DoD (§35), archive
+   (§28), índice (§39) valem inteiros; mobile não é desculpa pra afrouxar.
+2. **NUNCA segredo no bundle.** API key privada, `client_secret`, chave de assinatura, credencial
    — nada no `.ipa`/`.apk`, código, plist/`strings.xml`, `BuildConfig` ou var "pública". O app é
    **public client**; segredo que precisa existir fica no **servidor** atrás de um BFF. Achou
    segredo no rastro → **rotação** + remoção.
-2. **Auth delegada ao IdP da casa, no servidor.** O app **não** implementa login: **OIDC/OAuth 2.1
+3. **Auth delegada ao IdP da casa, no servidor.** O app **não** implementa login: **OIDC/OAuth 2.1
    + PKCE** contra `auth.<domain>`, retorno por **Universal/App Links verificados**, login no
    **navegador do sistema (não WebView)**. **Authz sempre no servidor** (deny-default, token fino,
    ReBAC) — esconder botão é UX, não autorização. Desenho do broker: `schematize-iam`.
-3. **Secure storage e zero vazamento.** Refresh/chaves em **Keychain/Keystore** (Secure Enclave/
+4. **Secure storage e zero vazamento.** Refresh/chaves em **Keychain/Keystore** (Secure Enclave/
    StrongBox); **nunca** em store em claro; **nunca** token/PII em log, crash report ou analytics.
    Dado sensível e a outbox de sync **cifrados em repouso**.
-4. **Passkeys+biometria no núcleo — biometria ≠ autorização.** Passkeys de plataforma são o fator
+5. **Passkeys+biometria no núcleo — biometria ≠ autorização.** Passkeys de plataforma são o fator
    forte; **biometria desbloqueia local** a chave, **não** substitui **step-up server-side** pra
    op sensível. Fallback via Email OTP always-on do IdP. **Logout irreversível** (revoga refresh+
    família no IdP, desassocia push).
-5. **Offline-first sem perder escrita.** A UI **lê do local**; escrita é otimista + **outbox
+6. **Offline-first sem perder escrita.** A UI **lê do local**; escrita é otimista + **outbox
    durável** com **idempotência**; sync é **delta** com tombstones; **conflito é resolvido por
    política explícita** (ADR) e o **servidor é a fonte de verdade**. Descartar escrita do usuário
    em silêncio é vetado.
-6. **Release com rollout gradual + gate.** Build **assinado no CI** (chaves em cofre),
+7. **Release com rollout gradual + gate.** Build **assinado pelo pipeline de tag/hml** (nunca por commit/PR; chaves em cofre),
    **staged/phased rollout** com gate de **crash-free/ANR** e **halt** na regressão (rollback é
    hotfix pra frente). OTA só de JS/config, **dentro das regras da loja**. Crash/ANR com símbolos,
    telemetria **sem PII**.
-7. **Device é território hostil — defesa em profundidade, verdade no servidor.** TLS + **SPKI
+8. **Device é território hostil — defesa em profundidade, verdade no servidor.** TLS + **SPKI
    pinning** (com backup/rotação); root/jailbreak e **attestation** como **sinal** pro risk engine
    (não bloqueio ingênuo); **ofuscação sensata** eleva custo mas **não** guarda segredo; deep link/
    IPC são entrada hostil (valide). A decisão de segurança nunca migra pro cliente.
-8. **Efeito externo NUNCA sai de não-produção — e o build já está distribuído.** Build de
-   **dev/QA/TestFlight/internal track/App Distribution NUNCA aponta pro backend de produção** nem
-   pro provedor real: base URL, `client_id` e chaves são **por build configuration / flavor /
-   scheme**, resolvidas **no build** e **fail-closed** (config ausente = **não-prd**); o **artefato
-   assinado** é inspecionado no CI. **Push em SANDBOX** (APNs `aps-environment: development` +
-   **projeto FCM de teste**; plist/`google-services.json` de **produção** em build de QA/TestFlight
-   é **VETADO** — em TestFlight o isolamento é do **remetente**). **Conta de teste/review/persona/
-   fixture só em domínio de ROTA NULA** (`test.<domain>` com null MX + SPF `-all` + DMARC
-   `p=reject`, ou `.test`/`.invalid`/`.example`) — **VETADO** `@gmail.com`, e-mail do testador/da
-   equipe e o domínio de prd. **E2E de Email OTP lê o código na API do SINK** (Mailpit), nunca em
-   caixa real. **Cap por execução** (contando a matriz inteira do device farm) + **guard
-   deny-by-default DENTRO do provider** valem inteiros. **Por quê:** build de teste que vaza pra
-   prd dispara efeito externo **real a partir de milhares de devices** — e não existe rollback de
-   binário instalado; bounce/complaint em massa queima IP/domínio e derruba o **OTP de login** de
-   produção. Normativa: `schematize-engineering` → `references/efeitos-externos.md`; recorte em
-   `entrega-lojas.md` §7 e `iam-mobile.md` §8.
-9. <!-- herdado:engineering/orquestracao:longo -->**Orquestrador não desenvolve; subagent barato executa.** O agent principal (o que fala com o humano, Claude Opus) **só planeja, decompõe, despacha, supervisiona e revisa** — não escreve código de entrega. Toda ação onerosa é quebrada em **micro-tasks/micro-funções** executáveis por agent barato (mesmo com <3 unidades: em série, por subagents, nunca inline no principal). Principal = **Claude Opus** (só orquestra). Roteamento: mecânico/muito simples → **`haiku`**; código → **`sonnet`** (falhou → o **mesmo subagent corrige**, até 2 rodadas) → **Codex `gpt-5.6-terra`** → **Cursor** (`cursor-agent`, se instalado) → **subagent `opus`** (motivo no checkpoint) → `park` + `- [~]`; escala **só quando o mais barato falhar**. **Visual (UI/layout/CSS/tema/ícone) vai direto ao Codex** (Claude é fraco em visual); **imagem nunca pelo Claude: detectar Codex/Gemini e PERGUNTAR ao usuário qual usar (Codex, cota da assinatura, é a sugestão — não automático) — PROIBIDO endpoint/API de imagem pago.** Estrutura configurável em `agentes.toml` (global `~/.claude/schematize/agentes.toml` + override por projeto) e na aba "Agentes" do overdev; Codex/Cursor via `schematize overdev delegar --papel <p> --brief-stdin --json` (rc 3 = indisponível → `proximo`). O principal revisa toda entrega (diff + gate) e **só corrige com a própria mão se necessário** (trivial, 1–2 linhas). No overdev, **cada item do checklist é executado pelo agente do papel adequado (default subagent `sonnet`)** e revisado pelo principal antes do `- [x]`; escalar não é pergunta, esgotou a escada → `park`. **Sem frota ociosa:** agent idle com pendência executável volta ao trabalho; pendência que depende de outro agent → mata e enfileira com gatilho de dependência; terminou → mata (§9.6). Detalhe em `schematize-engineering` → `references/orquestracao.md` §9.<!-- /herdado -->
+9. **Efeito externo NUNCA sai de não-produção — no mobile o build já está distribuído.** Normativa:
+   piso 18 da `schematize-engineering` + `references/efeitos-externos.md` (rota nula, sink, guard no
+   provider, cap por execução, chave sandbox). Recorte mobile: **(a)** build de dev/QA/TestFlight/
+   internal/App Distribution **nunca** aponta pro backend nem provedor de prd — base URL,
+   `client_id` e chaves por **build configuration/flavor/scheme**, **fail-closed** (config ausente =
+   não-prd), **artefato assinado** inspecionado. **(b)** **Push em sandbox** (APNs `development` +
+   FCM de teste); plist/`google-services.json` de prd em build de QA/TestFlight é VETADO. **(c)**
+   Conta de teste/review/persona/fixture só em `test.<domain>` de rota nula ou TLD reservado; E2E
+   de Email OTP lê o **sink**. Detalhe: `references/entrega-lojas.md` §7 e `references/iam-mobile.md` §8.
+10. <!-- herdado:engineering/orquestracao:longo -->**Orquestrador não desenvolve; subagent barato executa.** O agent principal (o que fala com o humano, Claude Opus) **só planeja, decompõe, despacha, supervisiona e revisa** — não escreve código de entrega. Toda ação onerosa é quebrada em **micro-tasks/micro-funções** executáveis por agent barato (mesmo com <3 unidades: em série, por subagents, nunca inline no principal). Principal = **Claude Opus** (só orquestra). Roteamento: mecânico/muito simples → **`haiku`**; código → **`sonnet`** (falhou → o **mesmo subagent corrige**, até 2 rodadas) → **Codex `gpt-5.6-terra`** → **Cursor** (`cursor-agent`, se instalado) → **subagent `opus`** (motivo no checkpoint) → `park` + `- [~]`; escala **só quando o mais barato falhar**. **Visual (UI/layout/CSS/tema/ícone) vai direto ao Codex** (Claude é fraco em visual); **imagem nunca pelo Claude: detectar Codex/Gemini e PERGUNTAR ao usuário qual usar (Codex, cota da assinatura, é a sugestão — não automático) — PROIBIDO endpoint/API de imagem pago.** Estrutura configurável em `agentes.toml` (global `~/.claude/schematize/agentes.toml` + override por projeto) e na aba "Agentes" do overdev; Codex/Cursor via `schematize overdev delegar --papel <p> --brief-stdin --json` (rc 3 = indisponível → `proximo`). O principal revisa toda entrega (diff + gate) e **só corrige com a própria mão se necessário** (trivial, 1–2 linhas). No overdev, **cada item do checklist é executado pelo agente do papel adequado (default subagent `sonnet`)** e revisado pelo principal antes do `- [x]`; escalar não é pergunta, esgotou a escada → `park`. **Sem frota ociosa:** agent idle com pendência executável volta ao trabalho; pendência que depende de outro agent → mata e enfileira com gatilho de dependência; terminou → mata (§9.6). Detalhe em `schematize-engineering` → `references/orquestracao.md` §9.<!-- /herdado -->
+11. **Herda os pisos 22–29 da `schematize-engineering`** (git como trava de conclusão, deploy só do git, ops é o gate da IA, sem agents inúteis, relatório 30 min/handoff 6 h, CI remoto só antes do hml, microserviço autônomo, build em dev/hml + higiene).
 
 ## Definition of Done
 
@@ -68,7 +64,7 @@ Nada é "pronto" sem: unit + UI/instrumentado verdes, fluxo crítico com e2e, **
 real fora de produção** (build de dev/QA/TestFlight nunca aponta pro backend nem pro provedor de
 `prd`; push em sandbox APNs / projeto FCM de teste; conta de teste/review em domínio de **rota
 nula**; Email OTP lido do **sink** — gate em `scripts/check-external-effects.sh`), crash-free acima
-do gate de rollout, sem segredo no bundle, **índice atualizado**, **archive commitado**, CI verde e
+do gate de rollout, sem segredo no bundle, **índice atualizado**, **archive commitado**, gate local verde (CI remoto só em tag/hml) e
 review aprovado. A DoD (§35) é a da base, `schematize-engineering` → `references/entrega.md`; o
 recorte mobile está em `references/entrega-lojas.md`.
 
@@ -80,7 +76,7 @@ recorte mobile está em `references/entrega-lojas.md`.
   link verificado, passkeys+biometria, secure storage, logout irreversível, authz no servidor.
 - **Offline/sync (`/mobile-offline`, `offline-sync.md`):** outbox, idempotência, delta sync,
   conflito explícito; roteiro de QA 100% offline.
-- **Release (`/mobile-release`, `entrega-lojas.md`):** assinatura, build no CI, staged rollout+gate,
+- **Release (`/mobile-release`, `entrega-lojas.md`):** assinatura, build em tag/hml, staged rollout+gate,
   OTA nas regras, review, crash com símbolos, **build de não-prd que não fala com produção** (§7).
 
 ## Relação com as outras skills

@@ -4,6 +4,22 @@ Todas as mudanças relevantes deste pacote, no formato [Keep a Changelog](https:
 com versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 
+## [Não lançado]
+
+### Corrigido
+- Gatilho de CI (piso 27): `entrega-lojas.md` ganha §1.1; build assinado, matriz e device farm só em tag `hml-*`/`v*`, `workflow_dispatch` ou pedido do usuário, nunca por commit/PR; o gate por commit é local. Textos "assinado no CI"/"CI verde"/"Todo PR" ajustados em SKILL.md, assets/CLAUDE.md, comandos e `testes-mobile.md`.
+- `entrega-lojas.md` §4: frase truncada sobre OTA de JS refeita; citação de OTA trocada de "Apple 3.3.1" para **2.5.2**, conferida no texto oficial (https://developer.apple.com/app-store/review/guidelines/, 2026-11-03).
+- Tabela de gates voláteis (target API, 16 KB, privacy manifest) removida de `entrega-lojas.md` §4.1; fica só em `stack-versoes.md` (números inalterados).
+- Piso de efeito externo deduplicado em SKILL.md, `assets/CLAUDE.md` e `/mobile-release`: só o recorte build/flavor/push/conta, apontando ao piso 18 da engineering; numeração unificada (SKILL.md e CLAUDE.md, pisos 1–11).
+- Novo `scripts/check-mobile-effects.sh` (+ teste vermelho→verde): cumpre o grep prometido em `entrega-lojas.md` §7.3 em `fastlane/`, `.maestro/`, `*.yaml`, `*.xcconfig`, `*.plist`, `*.entitlements` e, com `--nonprd`, barra `aps-environment=production`. O `check-external-effects.sh` herdado não foi editado (o sync o sobrescreve).
+
+### Adicionado
+- Bloco "Herda os pisos 22–29 da `schematize-engineering`" em SKILL.md e `assets/CLAUDE.md`.
+
+### Pendente (`[~]`)
+- P1-15 (resto): gate sobre o ARTEFATO assinado (`plutil`/`aapt dump`, `targetSdk`, 16 KB, `exported`) — exige ferramentas de SDK ausentes aqui, não testável.
+- P1-17 / P1-9: exigência de Xcode/SDK da App Store, verificação de desenvolvedor Android, Play Integrity vs SafetyNet — sem fonte oficial confirmada nesta rodada.
+
 ## [0.7.0] — 2026-10-14
 Integração com a nova `schematize-iam`: o IAM mobile aponta para o broker em vez de recopiá-lo; gate da skill-dev verde.
 

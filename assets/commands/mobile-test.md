@@ -16,7 +16,7 @@ real** (banco local, outbox, HTTP contra servidor falso). UI/instrumentado só n
 negócio perde se quebrarem.
 
 ## 2. Matriz de dispositivos (§2) — escrita e **datada**
-Piso e teto de SO no CI sempre; as 3–5 combinações mais frequentes **do seu parque** (analytics, não
+Piso e teto de SO por commit (local) sempre; as 3–5 combinações mais frequentes **do seu parque** (analytics, não
 mercado); os extremos que quebram layout (menor tela, maior fontScale, tema escuro, RTL); um device
 físico lento para o smoke de release. **Matriz sem data envelhece calada.**
 

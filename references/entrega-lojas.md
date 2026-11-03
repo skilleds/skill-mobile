@@ -15,8 +15,19 @@
 - **Play App Signing** (Google gerencia a chave de assinatura) e **assinatura gerenciada da Apple**
   quando possível — reduz o raio de perda. Credenciais de CI (App Store Connect API key, service
   account) em secret manager, com rotação.
-- **Build de release reprodutível e assinado no CI**, não na máquina de alguém. O artefato que vai
-  pra loja é o que o CI produziu e registrou (rastreável ao commit — casa com o archive §28).
+- **Build de release reprodutível e assinado pelo pipeline**, não na máquina de alguém. O artefato
+  que vai pra loja é o que o pipeline produziu e registrou (rastreável ao commit — casa com o
+  archive §28).
+
+### 1.1 Gatilho de CI (piso 27 da `schematize-engineering`)
+
+- **Por commit o gate é LOCAL** (`scripts/check-*.sh`, unit/UI no simulador local). **Build assinado,
+  matriz de devices e device farm NÃO rodam por commit nem por PR** (VETADO `pull_request` e `push`
+  em branch): são caros, usam segredo de assinatura e multiplicam disparo (§7.4).
+- **O CI remoto só dispara** por `workflow_dispatch`, por tag `hml-*`/`v*` (antes de promover a hml
+  ou de ir à loja) ou a pedido do usuário; `concurrency` com `cancel-in-progress: true` e
+  `paths-ignore` de docs/`*.md`.
+- Onde este reference diz "no CI", leia: **no pipeline de tag/hml ou a pedido** — nunca por commit.
 
 ## 2. Versionamento e trilhos de release
 
@@ -72,13 +83,13 @@ alavancas, com custos diferentes:
 - **OTA de conteúdo/config sempre:** feature flags, config remota, kill-switch de feature, conteúdo
   — atualizáveis sem release de loja. **Kill-switch** de feature nova é piso: liga/desliga sem
   esperar review.
-- **OTA de código JS (RN — `expo-updates`/EAS Update)** é legítimo **para JS bundle**, respeitando as
-  ✔ **2026-08-21: `CodePush` (App Center) foi APOSENTADO em 31/03/2025** junto com o App Center.
+- **OTA de código JS (RN — `expo-updates`/EAS Update)** é legítimo **para JS bundle**, dentro das regras das
+  lojas (abaixo). ✔ **2026-08-21: `CodePush` (App Center) foi APOSENTADO em 31/03/2025** junto com o App Center.
   Quem ainda depende dele tem um caminho de release que **não existe mais** — migrar é tarefa, não
   opinião. O padrão vivo é o **`expo-updates`/EAS Update** (ou um servidor de updates próprio
   compatível). Vale o mesmo piso de sempre: OTA entrega **bundle JS**, nunca código nativo, e
   **regras das lojas**: OTA **não** pode mudar propósito/comportamento aprovado do app nem burlar a
-  review (Apple 3.3.1 / Google). Correção de bug e ajuste de UI: ok. "App novo por OTA": violação.
+  review (Apple 2.5.2 / Google). Correção de bug e ajuste de UI: ok. "App novo por OTA": violação.
 - **OTA assinado e versionado:** o pacote OTA é assinado e casado a uma faixa de versão nativa
   (bundle novo em binário antigo pode crashar) — teste de compatibilidade antes de empurrar.
 - **Native precisa de review:** mudança de código nativo, permissão nova, SDK novo → passa pela loja.
@@ -91,15 +102,12 @@ alavancas, com custos diferentes:
 
 ## 4.1 Requisitos de plataforma com PRAZO — o que reprova o upload
 
-> ✔ **Verificado em 2026-08-21.** Estes três não são "boas práticas": são **gates de upload**, com
+> Estes três não são "boas práticas": são **gates de upload**, com
 > data. Faltavam inteiros nesta skill — e o modo de falha deles é o pior possível para uma equipe
 > mobile: o app **pronto** não sobe, no dia do release.
 
-| Requisito | Quem exige | Desde / até quando | O que acontece se faltar |
-|---|---|---|---|
-| **Target API level anual** | Google Play | corte em **31 de agosto** de cada ano — a partir de **31/08/2026**, app novo e atualização precisam mirar **Android 16 (API 36)**; Wear OS e Automotive, Android 15 (API 35); TV e XR, Android 14 (API 34) | **upload recusado**; app existente que não mirar API 35+ deixa de aparecer para **novos usuários** em devices mais novos |
-| **Page size de 16 KB** | Google Play (Android 15+, 64-bit) | exigido desde **01/11/2025** para app novo e atualização | **upload recusado** quando há código nativo (`.so`) não alinhado — atinge quem usa NDK, RN, Flutter e SDKs nativos de terceiros |
-| **Privacy manifest** (`PrivacyInfo.xcprivacy`) | Apple | **bloqueia upload desde maio/2024** | **upload recusado** quando o app (ou um SDK da lista) usa *required-reason API* sem declarar motivo, ou SDK da lista sem assinatura |
+**Os valores (target API, 16 KB, privacy manifest, datas) moram só em `stack-versoes.md`** — tabela
+canônica, com data de verificação. Aqui fica o que fazer com eles:
 
 **O que fazer com isso — e é o ponto:**
 
@@ -108,7 +116,7 @@ alavancas, com custos diferentes:
   recorrente e trate o bump de `targetSdk` como **tarefa de manutenção agendada**, com teste de
   regressão dos comportamentos que a nova API muda.
 - **16 KB é problema de DEPENDÊNCIA, não só seu.** Um `.so` de SDK de terceiro desalinhado reprova
-  o seu upload. Cheque no CI (`zipalign -c -P 16` / verificação de alinhamento do AGP) **antes** do
+  o seu upload. Cheque (`zipalign -c -P 16` / verificação de alinhamento do AGP, no build de tag/hml) **antes** do
   dia do release, e trate SDK que não alinha como bloqueio de dependência
   (`schematize-engineering` → `references/cadeia-suprimentos.md`).
 - **O privacy manifest é do app E dos SDKs.** O seu você escreve; o do SDK de terceiro você
@@ -180,7 +188,7 @@ alavancas, com custos diferentes:
   TestFlight acaba apontando pra `prd`.
 - **Fail-closed:** config de ambiente ausente ou ilegível ⇒ o build **assume não-prd** e usa o
   stack de teste. Nunca o contrário. Build que não sabe onde está **não fala com produção**.
-- **Gate no CI, sobre o ARTEFATO assinado** (não sobre o código): o job de build de não-prd
+- **Gate sobre o ARTEFATO assinado** (não sobre o código; roda no build de tag/hml, §1.1): o job de build de não-prd
   **falha** se o `.ipa`/`.aab` contiver a base URL de prd, o `GoogleService-Info.plist`/
   `google-services.json` de **produção**, `aps-environment: production` num build de dev, ou
   qualquer chave de provedor de prd (`plutil`/`aapt dump`/`strings` + grep).
@@ -219,21 +227,22 @@ alavancas, com custos diferentes:
   2º fator resolvido por **OTP pré-provisionado escopado àquela conta** (com expiração e **ADR**,
   §27) ou por **demo mode** — nunca apontando a conta de review pra uma caixa real do time. O
   detalhe de identidade está em `iam-mobile.md` §8.
-- **Grep no CI trava** `gmail|hotmail|outlook|yahoo|icloud` em `*Tests/`, `fixtures/`, `seed*/` e
-  nos arquivos de fastlane/Maestro.
+- **O gate local trava** `gmail|hotmail|outlook|yahoo|icloud` em `*Tests/`, `fixtures/`, `seed*/` e
+  nos arquivos de fastlane/Maestro/`*.yaml`/`*.xcconfig`/`*.plist`
+  (`scripts/check-mobile-effects.sh`, por commit).
 
 ### 7.4 O multiplicador do mobile: device farm
 
 O cap por execução e o guard no provider valem inteiros (`efeitos-externos.md`) — com um agravante
 daqui: uma suíte de UI test que faz "cria conta → recebe OTP → loga" roda **uma vez por device da
-matriz**. Uma matriz de 12 devices no Firebase Test Lab/Sauce/BrowserStack multiplica o disparo por
+matriz**. Uma matriz de 12 devices no Firebase Test Lab/Sauce/BrowserStack (que só roda em tag/hml ou a pedido, §1.1) multiplica o disparo por
 12 **sem ninguém notar**. Portanto: o cap conta **a execução inteira da matriz** (mesmo `run_id`
 propagado pra todos os shards), e o E2E de OTP lê o código no **sink** (`iam-mobile.md` §8), não em
 caixa nenhuma.
 
 ## 8. DoD de release mobile (soma à DoD §35)
 
-- [ ] Build de release **assinado no CI**, rastreável ao commit; chaves em cofre.
+- [ ] Build de release **assinado pelo pipeline de tag** (§1.1), rastreável ao commit; chaves em cofre.
 - [ ] Version/build number corretos; changelog + archive (§28) do release.
 - [ ] Passou por **trilho de teste** (TestFlight/closed track) antes de produção.
 - [ ] **Staged/phased rollout** configurado com gate de crash-free/ANR e plano de **halt**.
@@ -242,10 +251,10 @@ caixa nenhuma.
 - [ ] **Crash/ANR** com símbolos subidos; telemetria **sem PII/segredo**; privacy labels/ATT/permissões corretas.
 - [ ] Conta/roteiro de **review** preparados; regras da loja verificadas.
 - [ ] **Build de não-prd não fala com produção** (§7): base URL/`client_id`/chaves por build
-  configuration ou flavor, **fail-closed**, e o **artefato assinado** inspecionado no CI (nada de
+  configuration ou flavor, **fail-closed**, e o **artefato assinado** inspecionado no pipeline de tag/hml (nada de
   URL de prd, plist/json de FCM de produção ou chave de provedor de prd).
 - [ ] **Push isolado**: projeto FCM de teste / APNs sandbox em dev-QA; token registrado por build de
   não-prd **rejeitado** pelo backend de prd.
 - [ ] **Endereços de conta de teste/review/persona/fixture só em `test.<domain>` (rota nula)** ou TLD
-  reservado; grep do CI trava caixa real. E2E de Email OTP lê o código no **sink**
+  reservado; o gate local trava caixa real. E2E de Email OTP lê o código no **sink**
   (`iam-mobile.md` §8), com **cap por execução** válido pra matriz inteira do device farm.

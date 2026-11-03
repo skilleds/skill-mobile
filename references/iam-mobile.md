@@ -141,6 +141,6 @@ Casa com `iam.md` §3 ("passkey é núcleo, já é 2 fatores num"):
   autorizar.
 - [ ] Jailbreak/root alimenta o **risk engine**; testes de abuso de fluxo no IdP (schematize-pentest).
 - [ ] **Contas não-humanas** (seed/persona/fixture/demo/review) **só** em `test.<domain>` de rota
-  nula ou TLD reservado — **nenhum** e-mail de pessoa real; grep do CI trava caixa real.
+  nula ou TLD reservado — **nenhum** e-mail de pessoa real; o gate local trava caixa real.
 - [ ] **E2E de Email OTP lê o código no SINK** (API HTTP), nunca em caixa real; guard
   deny-by-default no provider + **cap por execução** provados por teste que vê o vermelho (§8).

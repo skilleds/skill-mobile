@@ -36,7 +36,7 @@ Testar em "um Android e um iPhone" é testar no seu bolso. A matriz é **decisã
 de dado:
 
 - **Piso e teto de SO:** a versão **mínima suportada** (a que mais quebra) e a **mais nova** (a que
-  muda comportamento sem avisar). As duas rodam no CI, sempre. As do meio, por amostragem.
+  muda comportamento sem avisar). As duas rodam por commit, local, sempre. As do meio, por amostragem.
 - **Do parque real:** as 3–5 combinações mais frequentes **dos seus usuários** (analytics), não as
   mais vendidas do mercado.
 - **Os extremos que quebram layout:** menor tela suportada, maior fonte de acessibilidade
@@ -99,10 +99,10 @@ Registro, rotação e limpeza de token; permissão negada; payload hostil. Os ca
 `performance.md` §4.1 — e são teste de verdade, com servidor falso, porque **push não se testa
 mandando push de verdade** (`efeitos-externos`).
 
-## 7. No CI, e o que sai da DoD
+## 7. Onde roda, e o que sai da DoD
 
-- **Todo PR:** unidade + integração no piso e no teto de SO. Rápido, senão vira opcional.
-- **Todo merge na branch de release:** UI nos caminhos críticos + a matriz completa + a11y.
+- **Todo commit (gate LOCAL):** unidade + integração no piso e no teto de SO, simulador local. Rápido, senão vira opcional.
+- **Tag `hml-*`/`v*` ou pedido (CI remoto, piso 27):** UI nos caminhos críticos + a matriz completa/device farm + a11y.
 - **Antes de subir para a loja:** smoke em **device físico**, teste de **upgrade** a partir da
   versão publicada, e o gate de crash-free (`entrega-lojas.md`).
 - **Cobertura faltante não vira "sem bug"** — é o mesmo piso da `schematize-qa` e da

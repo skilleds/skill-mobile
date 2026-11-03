@@ -26,7 +26,7 @@ opcional**.
    - `seguranca-mobile.md` — cliente hostil: **nunca segredo no bundle**, TLS+SPKI pinning,
      root/jailbreak+attestation como **sinal**, ofuscação sensata, dado cifrado em repouso, deep
      link/IPC como entrada hostil.
-   - `entrega-lojas.md` — assinatura em cofre, build no CI, **staged/phased rollout** com gate +
+   - `entrega-lojas.md` — assinatura em cofre, build assinado só em tag/hml (piso 27), **staged/phased rollout** com gate +
      **halt**, OTA nas regras, review guidelines, observabilidade/crash sem PII, e §7: **build de
      não-prd NUNCA fala com produção** (ambiente por build config/flavor, push em sandbox, conta de
      teste em domínio de rota nula).

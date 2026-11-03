@@ -1,5 +1,5 @@
 ---
-description: schematize-mobile — prepara/audita o release de loja (assinatura em cofre, build no CI, staged/phased rollout com gate + halt, OTA nas regras, review, kill-switch, crash com símbolos)
+description: schematize-mobile — prepara/audita o release de loja (assinatura em cofre, build em tag/hml, staged/phased rollout com gate + halt, OTA nas regras, review, kill-switch, crash com símbolos)
 argument-hint: "[track alvo, ex: internal | testflight | production]"
 ---
 <!-- cross-skill: observabilidade.md -> schematize-engineering -->
@@ -11,7 +11,7 @@ tem rollback instantâneo** — por isso rollout gradual e observabilidade são 
 ## 1. Assinatura e credenciais (segredo de ops)
 - Chaves de assinatura (**upload/app signing key Android**, certificados/perfis iOS) em **cofre** —
   nunca no repo/laptop. **Play App Signing** / assinatura gerenciada Apple quando possível.
-- **Build de release assinado no CI** (não na máquina de alguém), rastreável ao commit (archive §28).
+- **Build de release assinado pelo pipeline** (não na máquina de alguém), disparado só por tag `hml-*`/`v*`, `workflow_dispatch` ou pedido do usuário (piso 27; nunca por commit/PR), rastreável ao commit (archive §28). Device farm/matriz: idem.
 
 ## 2. Versão e trilhos
 - **SemVer** (marketing) + **build number monotônico** (nunca reusado). Passe por trilho de teste
@@ -24,7 +24,7 @@ tem rollback instantâneo** — por isso rollout gradual e observabilidade são 
 
 ## 4. OTA e kill-switch
 - **Kill-switch/feature flags** da feature nova (liga/desliga sem review).
-- OTA só de **JS bundle/config**, **dentro das regras** (Apple 3.3.1 / Google — não muda propósito
+- OTA só de **JS bundle/config**, **dentro das regras** (Apple 2.5.2 / Google — não muda propósito
   aprovado nem burla review), **assinado** e **compatível** com a faixa de versão nativa. Código
   nativo/permissão/SDK novo → **passa pela loja**.
 
@@ -39,12 +39,9 @@ tem rollback instantâneo** — por isso rollout gradual e observabilidade são 
   sync/funil (casa com `observabilidade.md`).
 
 ## 7. Efeito externo — build de teste NUNCA fala com produção
-- Base URL, `client_id` e chaves de provedor **por build configuration/flavor/scheme**, resolvidas
-  no build e **fail-closed** (config ausente = **não-prd**); o **artefato assinado** é inspecionado
-  no CI (nada de URL de prd, plist/`google-services.json` de produção, chave de provedor de prd).
-- **Push em sandbox** (APNs `development` + **projeto FCM de teste**); backend de prd **recusa**
-  token de build de não-prd. **Conta de teste/review/persona/fixture** só em `test.<domain>` de
-  **rota nula** ou TLD reservado — **VETADO** caixa real. E2E de Email OTP lê o código no **sink**.
+Normativa: piso 18 da `schematize-engineering`. Recorte: base URL/`client_id`/chaves por build
+configuration/flavor, **fail-closed**, artefato assinado inspecionado; push em sandbox; conta de
+teste só em `test.<domain>` de rota nula; Email OTP lê o **sink**. Detalhe: `entrega-lojas.md` §7.
 
 ## Saída
 Rode a **DoD de release mobile** (`entrega-lojas.md` §8) e reporte cada item como **FEITO com prova**

@@ -58,7 +58,7 @@ Digite `/mobile-help` pra ver todos. Em resumo:
 | `/mobile-load` | carrega à força TODO o corpo normativo (plataforma, offline/sync, IAM mobile, segurança, entrega, performance) e passa a aplicá-lo |
 | `/mobile-auth` | força/audita o IAM mobile casado com o `iam.md`: OIDC/PKCE delegando ao `auth.<domain>`, passkeys+biometria, secure storage, logout irreversível, sem segredo no bundle |
 | `/mobile-offline` | audita/planeja o offline-first & sync: UI lê do local, outbox durável, idempotência, delta sync, resolução de conflito explícita; roteiro de QA 100% offline |
-| `/mobile-release` | prepara/audita o release de loja: assinatura em cofre, build no CI, staged/phased rollout com gate de crash-free + halt, OTA dentro das regras, review guidelines, kill-switch |
+| `/mobile-release` | prepara/audita o release de loja: assinatura em cofre, build assinado em tag/hml, staged/phased rollout com gate de crash-free + halt, OTA dentro das regras, review guidelines, kill-switch |
 | `/mobile-test` | planeja/audita a **suíte de testes do app**: pirâmide no device, matriz de dispositivos datada, permissão negada, deep link, **migração do banco local**, processo morto, push |
 | `/mobile-claude` | cria ou mescla o `CLAUDE.md` sempre-on de mobile na raiz do repo |
 | `/mobile-cc` | context compact: gera handoff no archive e roda `/compact` |
@@ -81,7 +81,7 @@ Os comandos ficam em `assets/commands/` e são instalados em `.claude/commands/`
 4. **Segurança do cliente hostil** (`references/seguranca-mobile.md`): TLS+pinning, root/jailbreak
    e attestation como **sinal**, ofuscação sensata — defesa em profundidade, com a verdade sempre
    no servidor.
-5. **Entrega e operação** (`references/entrega-lojas.md`): assinatura em cofre, build no CI,
+5. **Entrega e operação** (`references/entrega-lojas.md`): assinatura em cofre, build assinado só em tag/hml (piso 27),
    **staged/phased rollout** com gate de crash-free, OTA dentro das regras, observabilidade/crash.
 6. **Performance/bateria/rede/push** (`references/performance.md`): medir, não adivinhar. No push,
    o que quebra em silêncio é o **token**: rotação, `POST_NOTIFICATIONS` (Android 13+) e limpeza do
@@ -100,7 +100,7 @@ Mapa de references — leia o que casa com a tarefa:
 | Offline-first, outbox de mutações, idempotência, delta sync, tombstones, resolução de conflito (LWW/merge/CRDT/servidor), testes de reconciliação | `references/offline-sync.md` |
 | IAM mobile: OIDC/PKCE, deep link verificado, passkeys+biometria, secure storage, logout irreversível, authz no servidor — casado com o `iam.md` | `references/iam-mobile.md` |
 | Segurança do cliente hostil: nunca segredo no bundle, cert/SPKI pinning, root/jailbreak+attestation, ofuscação, dado em repouso, deep link/IPC | `references/seguranca-mobile.md` |
-| Entrega nas lojas: assinatura, build no CI, staged/phased rollout+halt, OTA/regras de loja, review, observabilidade/crash | `references/entrega-lojas.md` |
+| Entrega nas lojas: assinatura, build em tag/hml, staged/phased rollout+halt, OTA/regras de loja, review, observabilidade/crash | `references/entrega-lojas.md` |
 | Performance, bateria, rede, tamanho e push notifications (ciclo de vida do token, `POST_NOTIFICATIONS`, limpeza de token morto); perfilar antes de otimizar | `references/performance.md` |
 | **Testes no app**: o que muda no mobile — pirâmide com as fronteiras do device, matriz de dispositivos datada, permissão negada nos 3 estados, deep link, **migração do banco local**, processo morto pelo SO, rede ruim (não ausente), a11y no fontScale máximo | `references/testes-mobile.md` |
 | Efeito externo fora de prd: build de não-prd que **não** fala com produção (build config/flavor), push em sandbox, conta de teste/review em domínio de rota nula, Email OTP contra o **sink** | `references/entrega-lojas.md` §7 + `references/iam-mobile.md` §8 (normativa: `schematize-engineering` → `references/efeitos-externos.md`) |
@@ -131,7 +131,7 @@ Independente do reference, estes limites nunca são cruzados:
    durável** com **idempotência**; sync é **delta** com tombstones; **resolução de conflito é
    explícita** (ADR) e o **servidor é a fonte de verdade**. Descartar escrita do usuário em silêncio
    é vetado.
-7. **Release com rollout gradual + gate — nunca 100% de uma vez.** Build **assinado no CI** (chaves
+7. **Release com rollout gradual + gate — nunca 100% de uma vez.** Build **assinado pelo pipeline de tag/hml** (nunca por commit/PR; chaves
    em cofre), **staged/phased rollout** com gate de **crash-free/ANR** e **halt** na regressão;
    rollback é hotfix pra frente. OTA só de JS/config, **dentro das regras da loja**. Crash/ANR com
    símbolos e telemetria **sem PII**.
@@ -139,26 +139,17 @@ Independente do reference, estes limites nunca são cruzados:
    pinning** (com backup/rotação), root/jailbreak e **attestation** como **sinal** pro risk engine
    (não bloqueio ingênuo), **ofuscação sensata** que eleva custo mas **não** guarda segredo. Deep
    link/IPC são entrada hostil — valide. A decisão de segurança nunca migra pro cliente.
-9. **Efeito externo NUNCA sai de não-produção — e no mobile o build já está distribuído.**
-   Normativa em `schematize-engineering` → `references/efeitos-externos.md` (domínio de teste em
-   **rota nula**, **sink** por default, **guard deny-by-default dentro do provider**, **cap por
-   execução**, chave **sandbox**) — o recorte mobile: **(a)** build de **dev/QA/TestFlight/internal
-   track/Firebase App Distribution NUNCA aponta pro backend de produção nem pro provedor real** —
-   base URL, `client_id` e chaves são **por build configuration / flavor / scheme**, resolvidas no
-   build e **fail-closed** (config ausente ⇒ assume **não-prd**), com o **artefato assinado**
-   inspecionado no CI. **(b)** **Push em SANDBOX**: APNs sandbox (`aps-environment: development`) e
-   **projeto FCM de teste separado** — `google-services.json`/`GoogleService-Info.plist` de
-   **produção** em build de QA/TestFlight é **VETADO**; em TestFlight (perfil de distribuição) o
-   isolamento é do **remetente** (hml manda pros tokens de hml). **(c)** Conta de teste — seed de
-   QA, persona de screenshot, fixture de UI test, **conta de review da Apple/Google** — só com
-   e-mail em `test.<domain>` de **rota nula** (null MX + SPF `-all` + DMARC `p=reject`) ou TLD
-   reservado; **VETADO** `@gmail.com`, o e-mail do **testador/da equipe** e o domínio de produção.
-   **(d)** E2E de **Email OTP** lê o código na **API HTTP do sink** (Mailpit), nunca numa caixa
-   real. **Por quê:** build de teste que vaza pra prd dispara efeito externo **real a partir de
-   milhares de devices de testadores** — e o app **já está distribuído**, não existe rollback como
-   num deploy de servidor. Detalhe em `references/entrega-lojas.md` §7 e `references/iam-mobile.md`
-   §8.
+9. **Efeito externo NUNCA sai de não-produção — no mobile o build já está distribuído.** Normativa:
+   piso 18 da `schematize-engineering` + `references/efeitos-externos.md` (rota nula, sink, guard no
+   provider, cap por execução, chave sandbox). Recorte mobile: **(a)** build de dev/QA/TestFlight/
+   internal/App Distribution **nunca** aponta pro backend nem provedor de prd — base URL,
+   `client_id` e chaves por **build configuration/flavor/scheme**, **fail-closed** (config ausente =
+   não-prd), **artefato assinado** inspecionado. **(b)** **Push em sandbox** (APNs `development` +
+   FCM de teste); plist/`google-services.json` de prd em build de QA/TestFlight é VETADO. **(c)**
+   Conta de teste/review/persona/fixture só em `test.<domain>` de rota nula ou TLD reservado; E2E
+   de Email OTP lê o **sink**. Detalhe: `references/entrega-lojas.md` §7 e `references/iam-mobile.md` §8.
 10. <!-- herdado:engineering/orquestracao:bullet -->**Orquestrador não desenvolve; subagent barato executa** (`schematize-engineering` → `references/orquestracao.md` §9). O principal só planeja/decompõe/despacha/supervisiona/revisa; ação onerosa vira micro-tasks; principal = Claude Opus; executor mais barato que resolve: `haiku` (mecânico) / `sonnet` (código, até 2 rodadas de correção pelo mesmo subagent) → Codex `gpt-5.6-terra` → Cursor → subagent `opus` (motivo no checkpoint) → `park`; **visual direto ao Codex; imagem nunca pelo Claude (pergunta ao usuário: Codex sugerido, ou Gemini), API de imagem paga PROIBIDA**; papéis configuráveis em `agentes.toml` (aba "Agentes" do overdev). No `overdev`, cada item do checklist é executado pelo papel adequado e revisado pelo principal (diff + gate) antes do `- [x]`. **Sem frota ociosa:** agent idle com pendência executável volta ao trabalho; pendência que depende de outro agent → mata e enfileira com gatilho de dependência; terminou → mata (§9.6).<!-- /herdado -->
+11. **Herda os pisos 22–29 da `schematize-engineering`** (git como trava de conclusão, deploy só do git, ops é o gate da IA, sem agents inúteis, relatório 30 min/handoff 6 h, CI remoto só antes do hml, microserviço autônomo, build em dev/hml + higiene).
 
 ## Relação com as outras skills
 
@@ -185,7 +176,7 @@ Independente do reference, estes limites nunca são cruzados:
   provados, não marcados na fé.
 
 - **schematize-qa** — a **disciplina de teste**, que esta skill herda inteira. O recorte mobile é
-  o *onde roda* (emulador/simulador e device farm no CI, teste instrumentado vs unit na JVM/host,
+  o *onde roda* (emulador/simulador local por commit; device farm só em tag/hml ou a pedido, teste instrumentado vs unit na JVM/host,
   UI test que espera evento e não `sleep`, snapshot por densidade de tela) — mas a pirâmide, o
   "verde de verdade", o smoke com self-check, a política de **flaky** (endêmica em teste de UI:
   quarentena com prazo e dono, nunca `retry` infinito) e os **gates de CI** são da
