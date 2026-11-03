@@ -3,7 +3,7 @@ name = "schematize-mobile"
 tag = "Mobile · iOS/Android/cross"
 status = "beta"
 order = 15
-current_version = "0.7.0"
+current_version = "0.8.0"
 href = "/mobile"
 
 [descriptions]

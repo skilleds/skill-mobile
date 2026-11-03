@@ -1,7 +1,7 @@
 ---
 name: schematize-mobile
 metadata:
-  version: 0.7.0
+  version: 0.8.0
 description: >-
   Mobile: nativo vs cross (fit + ADR), offline-first, IAM mobile (OIDC/PKCE, passkeys), push e lojas. Use ao revisar app iOS/Android/KMP/Flutter/RN, Info.plist ou AndroidManifest.
 ---
@@ -22,7 +22,7 @@ do **rol sancionado** (Go/Rust/Elixir/C#/Zig/Ruby) e um **IAM como app separada*
 `auth.<domain>` (o IdP da casa). O app **delega** authz e segredo ao servidor; ele é conveniência
 de UX, nunca a fonte de verdade nem o guardião do segredo.
 
-**Versão:** skill `schematize-mobile` v0.7.0. Changelog em `CHANGELOG.md`.
+**Versão:** skill `schematize-mobile` v0.8.0. Changelog em `CHANGELOG.md`.
 
 ## Precedência e herança (leia antes de divergir)
 

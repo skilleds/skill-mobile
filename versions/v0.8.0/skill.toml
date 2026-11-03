@@ -1,0 +1,12 @@
+slug = "mobile"
+name = "schematize-mobile"
+tag = "Mobile · iOS/Android/cross"
+status = "beta"
+order = 15
+current_version = "0.8.0"
+href = "/mobile"
+
+[descriptions]
+pt = "Engenharia de apps mobile da casa: o mesmo piso (segurança, IAM, testes, ops, DoD, archive) no cliente hostil que é o dispositivo — escolha de plataforma nativo (Swift/Kotlin) vs cross (KMP/Flutter/RN) por fit + ADR; offline-first & sync (outbox durável, idempotência, delta sync, conflito explícito, servidor autoritativo); IAM mobile casado com o iam.md (OIDC/PKCE delegando ao auth.<domain>, passkeys+biometria, secure storage, logout irreversível, NUNCA segredo no bundle, authz no servidor); push (APNs/FCM), performance/bateria/rede, entrega nas lojas (assinatura, staged rollout, OTA nas regras, review), observabilidade/crash e segurança (SPKI pinning, root/jailbreak como sinal, ofuscação sensata)."
+en = "House mobile app engineering: the same floor (security, IAM, testing, ops, DoD, archive) on the hostile client that is the device — platform choice native (Swift/Kotlin) vs cross (KMP/Flutter/RN) by fit + ADR; offline-first & sync (durable outbox, idempotency, delta sync, explicit conflict resolution, server as source of truth); mobile IAM matching iam.md (OIDC/PKCE delegating to auth.<domain>, passkeys+biometrics, secure storage, irreversible logout, NEVER a secret in the bundle, authz on the server); push (APNs/FCM), performance/battery/network, store delivery (signing, staged rollout, in-policy OTA, review), observability/crash and security (SPKI pinning, root/jailbreak as signal, sensible obfuscation)."
+es = "Ingeniería de apps móviles de la casa: el mismo piso (seguridad, IAM, pruebas, ops, DoD, archive) en el cliente hostil que es el dispositivo — elección de plataforma nativo (Swift/Kotlin) vs cross (KMP/Flutter/RN) por fit + ADR; offline-first y sync (outbox durable, idempotencia, delta sync, resolución de conflicto explícita, servidor autoritativo); IAM móvil acoplado al iam.md (OIDC/PKCE delegando a auth.<domain>, passkeys+biometría, secure storage, logout irreversible, NUNCA un secreto en el bundle, authz en el servidor); push (APNs/FCM), rendimiento/batería/red, entrega en tiendas (firma, staged rollout, OTA dentro de las reglas, review), observabilidad/crash y seguridad (SPKI pinning, root/jailbreak como señal, ofuscación sensata)."
