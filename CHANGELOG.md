@@ -4,7 +4,7 @@ Todas as mudanças relevantes deste pacote, no formato [Keep a Changelog](https:
 com versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 
-## [Não lançado]
+## [0.8.0] — 2026-11-03
 
 ### Corrigido
 - Gatilho de CI (piso 27): `entrega-lojas.md` ganha §1.1; build assinado, matriz e device farm só em tag `hml-*`/`v*`, `workflow_dispatch` ou pedido do usuário, nunca por commit/PR; o gate por commit é local. Textos "assinado no CI"/"CI verde"/"Todo PR" ajustados em SKILL.md, assets/CLAUDE.md, comandos e `testes-mobile.md`.
